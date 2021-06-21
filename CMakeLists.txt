@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
-project(tracy VERSION 0.6.3)
+
+project(tracy VERSION 0.6.3 LANGUAGES CXX)
 
 set(HDR_DIR ${PROJECT_SOURCE_DIR})
 set(CLIENT_HDR_DIR ${HDR_DIR}/client)
@@ -9,58 +10,74 @@ set(SRC_DIR ${PROJECT_SOURCE_DIR})
 set(CLIENT_SRC_DIR ${SRC_DIR}/client)
 set(COMMON_SRC_DIR ${SRC_DIR}/common)
 
-set(HDR_FILES
-        ${HDR_DIR}/Tracy.hpp
-        ${HDR_DIR}/TracyC.h
+option(TRACY_INSTALL "Generate installation target" OFF)
 
-        ${CLIENT_HDR_DIR}/tracy_concurrentqueue.h
-        ${CLIENT_HDR_DIR}/tracy_rpmalloc.hpp
-        ${CLIENT_HDR_DIR}/TracyArmCpuTable.hpp
-        ${CLIENT_HDR_DIR}/TracyCallstack.h
-        ${CLIENT_HDR_DIR}/TracyCallstack.hpp
-        ${CLIENT_HDR_DIR}/TracyDxt1.hpp
-        ${CLIENT_HDR_DIR}/TracyFastVector.hpp
-        ${CLIENT_HDR_DIR}/TracyLock.hpp
-        ${CLIENT_HDR_DIR}/TracyProfiler.hpp
-        ${CLIENT_HDR_DIR}/TracyRingBuffer.hpp
-        ${CLIENT_HDR_DIR}/TracyScoped.hpp
-        ${CLIENT_HDR_DIR}/TracySysTime.hpp
-        ${CLIENT_HDR_DIR}/TracySysTrace.hpp
-        ${CLIENT_HDR_DIR}/TracySysTracePayload.hpp
-        ${CLIENT_HDR_DIR}/TracyThread.hpp
+file(GLOB_RECURSE CLIENT_HEADER ${CLIENT_HDR_DIR}/*.h)
+file(GLOB_RECURSE CLIENT_SOURCE ${CLIENT_SRC_DIR}/*.cpp)
+file(GLOB_RECURSE CLIENT_TEMPLATE_HEADER ${CLIENT_HDR_DIR}/*.hpp)
 
-        ${COMMON_HDR_DIR}/tracy_lz4.hpp
-        ${COMMON_HDR_DIR}/tracy_lz4hc.hpp
-        ${COMMON_HDR_DIR}/TracyAlign.hpp
-        ${COMMON_HDR_DIR}/TracyAlloc.hpp
-        ${COMMON_HDR_DIR}/TracyApi.h
-        ${COMMON_HDR_DIR}/TracyColor.hpp
-        ${COMMON_HDR_DIR}/TracyForceInline.hpp
-        ${COMMON_HDR_DIR}/TracyMutex.hpp
-        ${COMMON_HDR_DIR}/TracyProtocol.hpp
-        ${COMMON_HDR_DIR}/TracyQueue.hpp
-        ${COMMON_HDR_DIR}/TracySocket.hpp
-        ${COMMON_HDR_DIR}/TracySystem.hpp
-        )
+file(GLOB_RECURSE COMMON_HEADER ${COMMON_HDR_DIR}/*.h)
+file(GLOB_RECURSE COMMON_SOURCE ${COMMON_SRC_DIR}/*.cpp)
+file(GLOB_RECURSE COMMON_TEMPLATE_HEADER ${COMMON_HDR_DIR}/*.hpp)
 
-set(SRC_FILES
-        ${SRC_DIR}/TracyClient.cpp
+file(GLOB ROOT_HEADER ${HDR_DIR}/*.h)
+file(GLOB ROOT_SOURCE ${SRC_DIR}/*.cpp)
+file(GLOB ROOT_TEMPLATE_HEADER ${HDR_DIR}/*.hpp)
 
-        ${CLIENT_SRC_DIR}/tracy_rpmalloc.cpp
-        ${CLIENT_SRC_DIR}/TracyCallstack.cpp
-        ${CLIENT_SRC_DIR}/TracyDxt1.cpp
-        ${CLIENT_SRC_DIR}/TracyProfiler.cpp
-        ${CLIENT_SRC_DIR}/TracySysTime.cpp
-        ${CLIENT_SRC_DIR}/TracySysTrace.cpp
+set(TRACY_HEADERS ${CLIENT_HEADER} ${COMMON_HEADER} ${ROOT_HEADER})
+set(TRACY_SOURCES ${CLIENT_SOURCE} ${COMMON_SOURCE} ${ROOT_SOURCE})
+set(TRACY_TEMPLATE_HEADERS ${CLIENT_TEMPLATE_HEADER} ${COMMON_TEMPLATE_HEADER} ${ROOT_TEMPLATE_HEADER})
 
-        ${COMMON_SRC_DIR}/tracy_lz4.cpp
-        ${COMMON_SRC_DIR}/tracy_lz4hc.cpp
-        ${COMMON_SRC_DIR}/TracySocket.cpp
-        ${COMMON_SRC_DIR}/TracySystem.cpp
-        )
-
-add_library(tracy STATIC ${HDR_FILES} ${SRC_FILES})
+add_library(tracy STATIC ${TRACY_HEADERS} ${TRACY_TEMPLATE_HEADERS} ${TRACY_SOURCES})
 
 target_include_directories(tracy PUBLIC $<INSTALL_INTERFACE:include>)
 target_compile_definitions(tracy PRIVATE TRACY_ENABLE)
 set_target_properties(tracy PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+# Install
+if(TRACY_INSTALL)
+    # cmake install dirs
+    include(GNUInstallDirs)
+
+    set(version_config "${CMAKE_CURRENT_BINARY_DIR}/tracyConfigVersion.cmake")
+    set(project_config "${CMAKE_CURRENT_BINARY_DIR}/tracyConfig.cmake")
+    set(targets_export_name "tracyTargets")
+    set(namespace "tracy::")
+
+    # Include module with fuction 'write_basic_package_version_file'
+    include(CMakePackageConfigHelpers)
+
+    # Configure 'gladConfigVersion.cmake'
+    # PROJECT_VERSION is used as a VERSION
+    write_basic_package_version_file("${version_config}" COMPATIBILITY SameMajorVersion)
+
+    # Configure 'tracyConfig.cmake'
+    # Uses targets_export_name variable.
+    configure_package_config_file(
+            "Config.cmake.in"
+            "${project_config}"
+            INSTALL_DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR}/cmake/tracy)
+
+    # Targets:
+    install(
+            TARGETS tracy
+            EXPORT "${targets_export_name}"
+            LIBRARY DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR})
+
+    install(FILES ${TRACY_HEADERS}
+            DESTINATION ${CMAKE_INSTALL_FULL_INCLUDEDIR}/tracy)
+
+    # Install tracyConfig.cmake, tracyConfigVersion.cmake
+    install(
+            FILES "${project_config}" "${version_config}"
+            DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR}/cmake/tracy)
+
+    # Create and install tracyTargets.cmake
+    install(
+            EXPORT "${targets_export_name}"
+            NAMESPACE "${namespace}"
+            DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR}/cmake/tracy)
+
+endif()

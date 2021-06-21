@@ -604,6 +604,7 @@ void SysTraceSendExternalName( uint64_t thread )
 #    include <linux/version.h>
 #    include <sys/mman.h>
 #    include <sys/ioctl.h>
+#    include <syscall.h>
 
 #    include "TracyProfiler.hpp"
 #    include "TracyRingBuffer.hpp"
