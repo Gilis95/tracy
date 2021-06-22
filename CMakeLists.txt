@@ -12,23 +12,22 @@ set(COMMON_SRC_DIR ${SRC_DIR}/common)
 
 option(TRACY_INSTALL "Generate installation target" OFF)
 
-file(GLOB_RECURSE CLIENT_HEADER ${CLIENT_HDR_DIR}/*.h)
+file(GLOB_RECURSE CLIENT_HEADERS ${CLIENT_HDR_DIR}/*.h)
 file(GLOB_RECURSE CLIENT_SOURCE ${CLIENT_SRC_DIR}/*.cpp)
-file(GLOB_RECURSE CLIENT_TEMPLATE_HEADER ${CLIENT_HDR_DIR}/*.hpp)
+file(GLOB_RECURSE CLIENT_INLINE ${CLIENT_HDR_DIR}/*.hpp)
 
-file(GLOB_RECURSE COMMON_HEADER ${COMMON_HDR_DIR}/*.h)
+file(GLOB_RECURSE COMMON_HEADERS ${COMMON_HDR_DIR}/*.h)
+file(GLOB_RECURSE COMMON_INLINE ${COMMON_HDR_DIR}/*.hpp)
 file(GLOB_RECURSE COMMON_SOURCE ${COMMON_SRC_DIR}/*.cpp)
-file(GLOB_RECURSE COMMON_TEMPLATE_HEADER ${COMMON_HDR_DIR}/*.hpp)
 
-file(GLOB ROOT_HEADER ${HDR_DIR}/*.h)
+file(GLOB ROOT_HEADERS ${HDR_DIR}/*.h)
+file(GLOB ROOT_INLINE ${HDR_DIR}/*.hpp)
 file(GLOB ROOT_SOURCE ${SRC_DIR}/*.cpp)
-file(GLOB ROOT_TEMPLATE_HEADER ${HDR_DIR}/*.hpp)
 
-set(TRACY_HEADERS ${CLIENT_HEADER} ${COMMON_HEADER} ${ROOT_HEADER})
+set(TRACY_HEADERS ${CLIENT_HEADERS} ${CLIENT_INLINE} ${COMMON_HEADERS} ${COMMON_INLINE} ${ROOT_HEADERS} ${ROOT_INLINE})
 set(TRACY_SOURCES ${CLIENT_SOURCE} ${COMMON_SOURCE} ${ROOT_SOURCE})
-set(TRACY_TEMPLATE_HEADERS ${CLIENT_TEMPLATE_HEADER} ${COMMON_TEMPLATE_HEADER} ${ROOT_TEMPLATE_HEADER})
 
-add_library(tracy STATIC ${TRACY_HEADERS} ${TRACY_TEMPLATE_HEADERS} ${TRACY_SOURCES})
+add_library(tracy STATIC ${TRACY_HEADERS} ${TRACY_SOURCES})
 
 target_include_directories(tracy PUBLIC $<INSTALL_INTERFACE:include>)
 target_compile_definitions(tracy PRIVATE TRACY_ENABLE)
@@ -44,7 +43,7 @@ if(TRACY_INSTALL)
     set(targets_export_name "tracyTargets")
     set(namespace "tracy::")
 
-    # Include module with fuction 'write_basic_package_version_file'
+    # Include module with function 'write_basic_package_version_file'
     include(CMakePackageConfigHelpers)
 
     # Configure 'gladConfigVersion.cmake'
@@ -66,8 +65,14 @@ if(TRACY_INSTALL)
             ARCHIVE DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR}
             RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR})
 
-    install(FILES ${TRACY_HEADERS}
+    install(FILES ${ROOT_HEADERS} ${ROOT_INLINE}
             DESTINATION ${CMAKE_INSTALL_FULL_INCLUDEDIR}/tracy)
+
+    install(FILES ${COMMON_HEADERS} ${COMMON_INLINE}
+            DESTINATION ${CMAKE_INSTALL_FULL_INCLUDEDIR}/tracy/common)
+
+    install(FILES ${CLIENT_HEADERS} ${CLIENT_INLINE}
+            DESTINATION ${CMAKE_INSTALL_FULL_INCLUDEDIR}/tracy/client)
 
     # Install tracyConfig.cmake, tracyConfigVersion.cmake
     install(
