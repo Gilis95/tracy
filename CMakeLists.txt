@@ -29,7 +29,9 @@ set(TRACY_SOURCES ${CLIENT_SOURCE} ${COMMON_SOURCE} ${ROOT_SOURCE})
 
 add_library(tracy STATIC ${TRACY_HEADERS} ${TRACY_SOURCES})
 
-target_include_directories(tracy PUBLIC $<INSTALL_INTERFACE:include>)
+target_include_directories(tracy PUBLIC
+        $<BUILD_INTERFACE:${HDR_DIR}>
+        $<INSTALL_INTERFACE:include>)
 target_compile_definitions(tracy PRIVATE TRACY_ENABLE)
 set_target_properties(tracy PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
